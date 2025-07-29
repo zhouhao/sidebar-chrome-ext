@@ -516,7 +516,6 @@ const Sidebar: React.FC = () => {
   // Function to hide sidebar
   const handleHideSidebar = () => {
     setIsSidebarHidden(true);
-    setShowSettingsModal(false); // Close settings modal when hiding sidebar
     document.body.style.marginLeft = '0px'; // Remove body margin when sidebar is hidden
     document.body.style.transition = 'margin-left 0.3s ease';
   };
