@@ -531,7 +531,7 @@ const Sidebar: React.FC = () => {
         position: 'fixed',
         bottom: '80px',
         left: '20px',
-        zIndex: '999999',
+        
       }}>
         <button
           onClick={handleShowSidebar}
