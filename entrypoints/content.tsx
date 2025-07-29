@@ -66,6 +66,15 @@ const Sidebar: React.FC = () => {
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
   const [addLinkError, setAddLinkError] = useState('');
+  
+  // Settings modal state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  
+  // Drag and drop state
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Load user links from background storage via messaging with retry logic
   useEffect(() => {
@@ -178,6 +187,175 @@ const Sidebar: React.FC = () => {
     setAddLinkError('');
   };
 
+  // Function to export URLs as JSON
+  const handleExportData = () => {
+    try {
+      const exportData = {
+        urls: userLinks,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+      
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sidebar-urls-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log('[DEBUG_LOG] Exported URLs:', exportData);
+    } catch (error) {
+      console.error('[DEBUG_LOG] Error exporting data:', error);
+    }
+  };
+
+  // Helper function to process imported file (used by both file input and drag-and-drop)
+  const processImportedFile = async (file: File) => {
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
+      throw new Error('Please select a valid JSON file.');
+    }
+
+    setIsImporting(true);
+    setImportError('');
+    setImportSuccess('');
+
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+      
+      // Validate the imported data structure
+      if (!importData.urls || !Array.isArray(importData.urls)) {
+        throw new Error('Invalid file format. Expected JSON with "urls" array.');
+      }
+
+      // Validate each URL
+      const validUrls: string[] = [];
+      const invalidUrls: string[] = [];
+      
+      for (const url of importData.urls) {
+        if (typeof url === 'string' && isValidUrl(url)) {
+          validUrls.push(url);
+        } else {
+          invalidUrls.push(url);
+        }
+      }
+
+      if (validUrls.length === 0) {
+        throw new Error('No valid URLs found in the imported file.');
+      }
+
+      // Merge with existing URLs (avoid duplicates)
+      const existingUrls = new Set(userLinks);
+      const newUrls = validUrls.filter(url => !existingUrls.has(url));
+      
+      if (newUrls.length === 0) {
+        setImportSuccess('All URLs from the file are already in your list.');
+      } else {
+        const updatedUrls = [...userLinks, ...newUrls];
+        setUserLinks(updatedUrls);
+        
+        let successMessage = `Successfully imported ${newUrls.length} new URL${newUrls.length > 1 ? 's' : ''}.`;
+        if (invalidUrls.length > 0) {
+          successMessage += ` ${invalidUrls.length} invalid URL${invalidUrls.length > 1 ? 's were' : ' was'} skipped.`;
+        }
+        setImportSuccess(successMessage);
+        
+        console.log('[DEBUG_LOG] Imported URLs:', newUrls);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to import file.';
+      setImportError(errorMessage);
+      console.error('[DEBUG_LOG] Error importing data:', error);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Function to import URLs from JSON (file input)
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await processImportedFile(file);
+    } finally {
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
+
+  // Drag and drop event handlers
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isDragOver) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    // Only set isDragOver to false if we're leaving the drop zone entirely
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragOver(false);
+
+    if (isImporting) {
+      return; // Don't allow drops while already importing
+    }
+
+    const files = Array.from(event.dataTransfer.files);
+    
+    if (files.length === 0) {
+      setImportError('No files were dropped.');
+      return;
+    }
+
+    if (files.length > 1) {
+      setImportError('Please drop only one JSON file at a time.');
+      return;
+    }
+
+    const file = files[0];
+    
+    try {
+      await processImportedFile(file);
+    } catch (error) {
+      console.error('[DEBUG_LOG] Error processing dropped file:', error);
+    }
+  };
+
+  // Function to close settings modal
+  const handleCloseSettings = () => {
+    setShowSettingsModal(false);
+    setImportError('');
+    setImportSuccess('');
+    setIsDragOver(false); // Reset drag state when closing modal
+  };
+
   return (
     <div
       style={{
@@ -214,7 +392,7 @@ const Sidebar: React.FC = () => {
           marginTop: '15px',
           flex: '1',
           overflowY: 'auto',
-          paddingBottom: '60px' // Space for plus button
+          paddingBottom: '100px' // Space for plus button and settings button
         }}>
           {/* Example External Favicons */}
           {Object.entries(exampleFavicons).map(([url, result]) => (
@@ -280,7 +458,7 @@ const Sidebar: React.FC = () => {
         {/* Plus Button */}
         <div style={{
           position: 'absolute',
-          bottom: '10px',
+          bottom: '50px',
           left: '50%',
           transform: 'translateX(-50%)'
         }}>
@@ -308,6 +486,40 @@ const Sidebar: React.FC = () => {
             }}
           >
             +
+          </button>
+        </div>
+
+        {/* Settings Button */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)'
+        }}>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              backgroundColor: '#555555',
+              border: '1px solid #777777',
+              color: '#ffffff',
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#666666';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#555555';
+            }}
+          >
+            ⚙️
           </button>
         </div>
       </div>
@@ -405,6 +617,186 @@ const Sidebar: React.FC = () => {
               }}
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div style={{
+          position: 'fixed',
+          bottom: '90px', // Position above the settings button
+          left: '10px', // Align with sidebar padding
+          width: '380px',
+          backgroundColor: '#404040',
+          border: '1px solid #555555',
+          borderRadius: '8px',
+          padding: '20px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+          zIndex: '1000000'
+        }}>
+          <h4 style={{
+            margin: '0 0 15px 0',
+            color: '#ffffff',
+            fontSize: '16px',
+            textAlign: 'center'
+          }}>
+            Import & Export Settings
+          </h4>
+
+          {/* Export Section */}
+          <div style={{ marginBottom: '20px' }}>
+            <h5 style={{
+              margin: '0 0 10px 0',
+              color: '#ffffff',
+              fontSize: '14px'
+            }}>
+              Export Data
+            </h5>
+            <button
+              onClick={handleExportData}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: '#4CAF50',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                (e.target as HTMLButtonElement).style.backgroundColor = '#45a049';
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLButtonElement).style.backgroundColor = '#4CAF50';
+              }}
+            >
+              Download URLs as JSON
+            </button>
+          </div>
+
+          {/* Import Section */}
+          <div style={{ marginBottom: '15px' }}>
+            <h5 style={{
+              margin: '0 0 10px 0',
+              color: '#ffffff',
+              fontSize: '14px'
+            }}>
+              Import Data
+            </h5>
+            
+            {/* Drag and Drop Zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              style={{
+                border: isDragOver ? '2px dashed #4CAF50' : '2px dashed #666666',
+                borderRadius: '8px',
+                padding: '20px',
+                backgroundColor: isDragOver ? 'rgba(76, 175, 80, 0.1)' : '#333333',
+                textAlign: 'center',
+                transition: 'all 0.2s ease',
+                marginBottom: '10px',
+                cursor: isImporting ? 'not-allowed' : 'pointer',
+                opacity: isImporting ? 0.6 : 1
+              }}
+            >
+              <div style={{
+                color: isDragOver ? '#4CAF50' : '#ffffff',
+                fontSize: '14px',
+                marginBottom: '10px'
+              }}>
+                {isDragOver ? (
+                  '📁 Drop your JSON file here'
+                ) : (
+                  '📁 Drag & drop a JSON file here, or click to browse'
+                )}
+              </div>
+              
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportData}
+                disabled={isImporting}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #666666',
+                  borderRadius: '4px',
+                  backgroundColor: '#404040',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  cursor: isImporting ? 'not-allowed' : 'pointer'
+                }}
+              />
+            </div>
+            
+            {isImporting && (
+              <p style={{
+                color: '#ffffff',
+                fontSize: '12px',
+                margin: '5px 0 0 0',
+                textAlign: 'center'
+              }}>
+                Importing...
+              </p>
+            )}
+          </div>
+
+          {/* Success Message */}
+          {importSuccess && (
+            <div style={{
+              backgroundColor: '#4CAF50',
+              color: '#ffffff',
+              padding: '8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              marginBottom: '10px',
+              textAlign: 'center'
+            }}>
+              {importSuccess}
+            </div>
+          )}
+
+          {/* Error Message */}
+          {importError && (
+            <div style={{
+              backgroundColor: '#f44336',
+              color: '#ffffff',
+              padding: '8px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              marginBottom: '10px',
+              textAlign: 'center'
+            }}>
+              {importError}
+            </div>
+          )}
+
+          {/* Close Button */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '15px'
+          }}>
+            <button
+              onClick={handleCloseSettings}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#666666',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Close
             </button>
           </div>
         </div>
