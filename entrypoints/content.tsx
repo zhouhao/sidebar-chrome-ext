@@ -75,6 +75,35 @@ const Sidebar: React.FC = () => {
   
   // Drag and drop state
   const [isDragOver, setIsDragOver] = useState(false);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    url: string;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    url: ''
+  });
+  
+  // Confirmation dialog state
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [urlToDelete, setUrlToDelete] = useState('');
+
+  // Hide context menu when clicking elsewhere
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.visible) {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu.visible]);
 
   // Load user links from background storage via messaging with retry logic
   useEffect(() => {
@@ -348,6 +377,42 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  // Function to handle right-click on icons
+  const handleRightClick = (event: React.MouseEvent, url: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      url: url
+    });
+  };
+
+  // Function to handle delete from context menu
+  const handleDeleteFromContextMenu = () => {
+    setUrlToDelete(contextMenu.url);
+    setShowDeleteConfirmation(true);
+    setContextMenu(prev => ({ ...prev, visible: false }));
+  };
+
+  // Function to confirm deletion
+  const handleConfirmDelete = () => {
+    if (urlToDelete) {
+      setUserLinks(prev => prev.filter(url => url !== urlToDelete));
+      console.log('[DEBUG_LOG] Deleted URL:', urlToDelete);
+    }
+    setShowDeleteConfirmation(false);
+    setUrlToDelete('');
+  };
+
+  // Function to cancel deletion
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
+    setUrlToDelete('');
+  };
+
   // Function to close settings modal
   const handleCloseSettings = () => {
     setShowSettingsModal(false);
@@ -427,12 +492,16 @@ const Sidebar: React.FC = () => {
             // Generate favicon on-demand for each URL
             const faviconResult = getFaviconViaGoogle(url);
             return (
-              <div key={url} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%'
-              }}>
+              <div 
+                key={url} 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%'
+                }}
+                onContextMenu={(e) => handleRightClick(e, url)}
+              >
                 {faviconResult.success ? (
                   <a href={url} target="_blank" rel="noreferrer">
                     <img
@@ -798,6 +867,128 @@ const Sidebar: React.FC = () => {
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <div
+          style={{
+            position: 'fixed',
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+            backgroundColor: '#404040',
+            border: '1px solid #555555',
+            borderRadius: '4px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            zIndex: '1000001',
+            minWidth: '120px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            onClick={handleDeleteFromContextMenu}
+            style={{
+              padding: '8px 12px',
+              color: '#ff6b6b',
+              cursor: 'pointer',
+              fontSize: '14px',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLDivElement).style.backgroundColor = '#555555';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLDivElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            🗑️ Delete
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirmation && (
+        <div style={{
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: '1000002'
+        }}>
+          <div style={{
+            backgroundColor: '#404040',
+            border: '1px solid #555555',
+            borderRadius: '8px',
+            padding: '20px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h4 style={{
+              margin: '0 0 15px 0',
+              color: '#ffffff',
+              fontSize: '16px',
+              textAlign: 'center'
+            }}>
+              Confirm Deletion
+            </h4>
+            
+            <p style={{
+              color: '#ffffff',
+              fontSize: '14px',
+              margin: '0 0 20px 0',
+              textAlign: 'center',
+              wordBreak: 'break-all'
+            }}>
+              Are you sure you want to delete this link?<br/>
+              <span style={{ color: '#cccccc', fontSize: '12px' }}>
+                {urlToDelete}
+              </span>
+            </p>
+
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={handleConfirmDelete}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f44336',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Delete
+              </button>
+
+              <button
+                onClick={handleCancelDelete}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#666666',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
