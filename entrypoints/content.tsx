@@ -49,33 +49,49 @@ const Sidebar: React.FC = () => {
   const [isAddingLink, setIsAddingLink] = useState(false);
   const [addLinkError, setAddLinkError] = useState('');
 
-  // Load user links from localStorage
+  // Load user links from background storage via messaging
   useEffect(() => {
-    const loadUserLinks = () => {
+    const loadUserLinks = async () => {
       try {
-        const savedLinks = localStorage.getItem('sidebar-user-links');
-        if (savedLinks) {
-          const parsedLinks: UserLink[] = JSON.parse(savedLinks);
-          setUserLinks(parsedLinks);
-          console.log('[DEBUG_LOG] Loaded user links from localStorage:', parsedLinks);
+        const response = await browser.runtime.sendMessage({
+          type: 'LOAD_USER_LINKS'
+        });
+        
+        if (response.success && response.data) {
+          setUserLinks(response.data);
+          console.log('[DEBUG_LOG] Loaded user links from background storage:', response.data);
+        } else {
+          console.error('[DEBUG_LOG] Failed to load user links:', response.error);
         }
       } catch (error) {
-        console.error('[DEBUG_LOG] Error loading user links from localStorage:', error);
+        console.error('[DEBUG_LOG] Error loading user links from background storage:', error);
       }
     };
 
     loadUserLinks();
   }, []);
 
-  // Save user links to localStorage whenever userLinks changes
+  // Save user links to background storage via messaging whenever userLinks changes
   useEffect(() => {
     if (userLinks.length > 0) {
-      try {
-        localStorage.setItem('sidebar-user-links', JSON.stringify(userLinks));
-        console.log('[DEBUG_LOG] Saved user links to localStorage:', userLinks);
-      } catch (error) {
-        console.error('[DEBUG_LOG] Error saving user links to localStorage:', error);
-      }
+      const saveUserLinks = async () => {
+        try {
+          const response = await browser.runtime.sendMessage({
+            type: 'SAVE_USER_LINKS',
+            data: userLinks
+          });
+          
+          if (response.success) {
+            console.log('[DEBUG_LOG] Saved user links to background storage:', userLinks);
+          } else {
+            console.error('[DEBUG_LOG] Failed to save user links:', response.error);
+          }
+        } catch (error) {
+          console.error('[DEBUG_LOG] Error saving user links to background storage:', error);
+        }
+      };
+      
+      saveUserLinks();
     }
   }, [userLinks]);
 
