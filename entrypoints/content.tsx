@@ -11,6 +11,30 @@ interface FaviconResult {
   error?: string;
 }
 
+// TypeScript interfaces for webext-bridge message responses
+interface SaveUserLinksResponse {
+  success: boolean;
+  error?: string;
+}
+
+interface LoadUserLinksResponse {
+  success: boolean;
+  data?: string[];
+  error?: string;
+}
+
+// Protocol map for webext-bridge (matching background.ts)
+interface ProtocolMap {
+  'save-user-links': {
+    data: string[];
+    return: SaveUserLinksResponse;
+  };
+  'load-user-links': {
+    data: void;
+    return: LoadUserLinksResponse;
+  };
+}
+
 /**
  * Get favicon using Google's favicon service
  * This is a reliable fallback method that works for most websites
@@ -50,7 +74,7 @@ const Sidebar: React.FC = () => {
         try {
           console.log(`[DEBUG_LOG] Attempting to load user links from background (attempt ${attempt}/${maxRetries})`);
 
-          const response = await sendMessage('load-user-links', undefined, 'background');
+          const response = await sendMessage('load-user-links', null, 'background') as unknown as LoadUserLinksResponse;
 
           if (response && response.success && response.data) {
             setUserLinks(response.data);
@@ -83,12 +107,12 @@ const Sidebar: React.FC = () => {
     if (userLinks.length > 0) {
       const saveUserLinks = async () => {
         try {
-          const response = await sendMessage('save-user-links', userLinks, 'background');
+          const response = await sendMessage('save-user-links', userLinks, 'background') as unknown as SaveUserLinksResponse;
 
-          if (response.success) {
+          if (response && response.success) {
             console.log('[DEBUG_LOG] Saved user links to background storage:', userLinks);
           } else {
-            console.error('[DEBUG_LOG] Failed to save user links:', response.error);
+            console.error('[DEBUG_LOG] Failed to save user links:', response?.error);
           }
         } catch (error) {
           console.error('[DEBUG_LOG] Error saving user links to background storage:', error);
@@ -98,33 +122,6 @@ const Sidebar: React.FC = () => {
       saveUserLinks();
     }
   }, [userLinks]);
-
-  useEffect(() => {
-    // Demonstrate fetching favicons from external websites
-    const loadExampleFavicons = async () => {
-      const exampleSites = [
-        'https://github.com',
-        'https://stackoverflow.com',
-        'https://google.com'
-      ];
-
-      for (const site of exampleSites) {
-        try {
-          // Use Google's favicon service for reliable results
-          const result = getFaviconViaGoogle(site);
-          setExampleFavicons(prev => ({
-            ...prev,
-            [site]: result
-          }));
-          console.log(`[DEBUG_LOG] Favicon for ${site}:`, result);
-        } catch (error) {
-          console.error(`[DEBUG_LOG] Error loading favicon for ${site}:`, error);
-        }
-      }
-    };
-
-    loadExampleFavicons();
-  }, []);
 
   // Function to validate URL
   const isValidUrl = (url: string): boolean => {
