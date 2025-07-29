@@ -735,6 +735,7 @@ const Sidebar: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              border: 'none',
             }}
             onMouseEnter={(e) => {
               (e.target as HTMLButtonElement).style.backgroundColor = '#666666';
