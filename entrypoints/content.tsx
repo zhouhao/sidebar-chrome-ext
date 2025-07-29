@@ -76,6 +76,10 @@ const Sidebar: React.FC = () => {
   // Drag and drop state
   const [isDragOver, setIsDragOver] = useState(false);
   
+  // Icon drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -413,6 +417,91 @@ const Sidebar: React.FC = () => {
     setUrlToDelete('');
   };
 
+  // Icon drag and drop handlers
+  const handleIconDragStart = (event: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDraggedIndex(index);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/html', event.currentTarget.outerHTML);
+    
+    // Add some visual feedback to the dragged element
+    setTimeout(() => {
+      if (event.currentTarget) {
+        event.currentTarget.style.opacity = '0.5';
+      }
+    }, 0);
+  };
+
+  const handleIconDragOver = (event: React.DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleIconDragEnter = (event: React.DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleIconDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    // Only clear dragOverIndex if we're actually leaving the drop zone
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleIconDrop = (event: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+    event.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      return;
+    }
+
+    // Create a new array with reordered items
+    const newUserLinks = [...userLinks];
+    const draggedItem = newUserLinks[draggedIndex];
+    
+    // Remove the dragged item from its original position
+    newUserLinks.splice(draggedIndex, 1);
+    
+    // Insert the dragged item at the new position
+    newUserLinks.splice(dropIndex, 0, draggedItem);
+    
+    // Update the state
+    setUserLinks(newUserLinks);
+    
+    console.log('[DEBUG_LOG] Reordered icons:', {
+      from: draggedIndex,
+      to: dropIndex,
+      draggedUrl: draggedItem,
+      newOrder: newUserLinks
+    });
+    
+    // Reset drag state
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleIconDragEnd = (event: React.DragEvent<HTMLDivElement>) => {
+    // Reset visual feedback
+    if (event.currentTarget) {
+      event.currentTarget.style.opacity = '1';
+    }
+    
+    // Reset drag state
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   // Function to close settings modal
   const handleCloseSettings = () => {
     setShowSettingsModal(false);
@@ -457,6 +546,7 @@ const Sidebar: React.FC = () => {
           marginTop: '15px',
           flex: '1',
           overflowY: 'auto',
+          overflowX: 'hidden',
           paddingBottom: '100px' // Space for plus button and settings button
         }}>
           {/* Example External Favicons */}
@@ -488,19 +578,36 @@ const Sidebar: React.FC = () => {
           ))}
 
           {/* User Added Links */}
-          {userLinks.map((url) => {
+          {userLinks.map((url, index) => {
             // Generate favicon on-demand for each URL
             const faviconResult = getFaviconViaGoogle(url);
+            const isDragging = draggedIndex === index;
+            const isDragOver = dragOverIndex === index;
+            
             return (
               <div 
                 key={url} 
+                draggable={true}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '100%'
+                  width: '100%',
+                  opacity: isDragging ? 0.5 : 1,
+                  backgroundColor: isDragOver ? 'rgba(76, 175, 80, 0.2)' : 'transparent',
+                  borderRadius: '4px',
+                  padding: '4px',
+                  margin: '2px 0',
+                  transition: 'all 0.2s ease',
+                  cursor: isDragging ? 'grabbing' : 'grab'
                 }}
                 onContextMenu={(e) => handleRightClick(e, url)}
+                onDragStart={(e) => handleIconDragStart(e, index)}
+                onDragOver={(e) => handleIconDragOver(e, index)}
+                onDragEnter={(e) => handleIconDragEnter(e, index)}
+                onDragLeave={handleIconDragLeave}
+                onDrop={(e) => handleIconDrop(e, index)}
+                onDragEnd={handleIconDragEnd}
               >
                 {faviconResult.success ? (
                   <a href={url} target="_blank" rel="noreferrer">
