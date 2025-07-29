@@ -18,7 +18,7 @@ def main():
     
     # Sizes to generate
     sizes = [16, 32, 48, 96, 128, 192]
-    
+
     # Create the output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
