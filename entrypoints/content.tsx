@@ -33,17 +33,10 @@ const getFaviconViaGoogle = (url: string): FaviconResult => {
   }
 };
 
-// Interface for user-added links
-interface UserLink {
-  url: string;
-  favicon: FaviconResult;
-  addedAt: number;
-}
-
 // Sidebar component with favicon functionality
 const Sidebar: React.FC = () => {
   const [exampleFavicons, setExampleFavicons] = useState<{ [key: string]: FaviconResult }>({});
-  const [userLinks, setUserLinks] = useState<UserLink[]>([]);
+  const [userLinks, setUserLinks] = useState<string[]>([]);
   const [showAddLinkModal, setShowAddLinkModal] = useState(false);
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
@@ -145,7 +138,7 @@ const Sidebar: React.FC = () => {
     }
 
     // Check for duplicates
-    const isDuplicate = userLinks.some(link => link.url === newLinkUrl) || 
+    const isDuplicate = userLinks.includes(newLinkUrl) || 
                        Object.keys(exampleFavicons).includes(newLinkUrl);
     
     if (isDuplicate) {
@@ -157,19 +150,11 @@ const Sidebar: React.FC = () => {
     setAddLinkError('');
 
     try {
-      // Get favicon for the new URL
-      const faviconResult = getFaviconViaGoogle(newLinkUrl);
-      
-      const newLink: UserLink = {
-        url: newLinkUrl,
-        favicon: faviconResult,
-        addedAt: Date.now()
-      };
-
-      setUserLinks(prev => [...prev, newLink]);
+      // Add URL directly to the list (no metadata stored)
+      setUserLinks(prev => [...prev, newLinkUrl]);
       setNewLinkUrl('');
       setShowAddLinkModal(false);
-      console.log('[DEBUG_LOG] Added new link:', newLink);
+      console.log('[DEBUG_LOG] Added new URL:', newLinkUrl);
     } catch (error) {
       setAddLinkError('Failed to add link. Please try again.');
       console.error('[DEBUG_LOG] Error adding new link:', error);
@@ -252,32 +237,36 @@ const Sidebar: React.FC = () => {
           ))}
 
           {/* User Added Links */}
-          {userLinks.map((link) => (
-            <div key={link.url} style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%'
-            }}>
-              {link.favicon.success ? (
-                <a href={link.url} target="_blank" rel="noreferrer">
-                  <img
-                    src={link.favicon.iconUrl}
-                    alt={`Favicon for ${link.url}`}
-                    style={{
-                      width: '25px',
-                      height: '25px',
-                      display: 'block'
-                    }}
-                    onError={(e) => {
-                      console.log('[DEBUG_LOG] User link favicon failed to load:', link.favicon.iconUrl);
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </a>
-              ) : null}
-            </div>
-          ))}
+          {userLinks.map((url) => {
+            // Generate favicon on-demand for each URL
+            const faviconResult = getFaviconViaGoogle(url);
+            return (
+              <div key={url} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%'
+              }}>
+                {faviconResult.success ? (
+                  <a href={url} target="_blank" rel="noreferrer">
+                    <img
+                      src={faviconResult.iconUrl}
+                      alt={`Favicon for ${url}`}
+                      style={{
+                        width: '25px',
+                        height: '25px',
+                        display: 'block'
+                      }}
+                      onError={(e) => {
+                        console.log('[DEBUG_LOG] User link favicon failed to load:', faviconResult.iconUrl);
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </a>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
 
         {/* Plus Button */}

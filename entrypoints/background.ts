@@ -1,25 +1,12 @@
-// Interface for user-added links (matching content script)
-interface UserLink {
-  url: string;
-  favicon: {
-    success: boolean;
-    iconUrl?: string;
-    format?: string;
-    source?: string;
-    error?: string;
-  };
-  addedAt: number;
-}
-
 // Message types for communication between content script and background
 interface StorageMessage {
   type: 'SAVE_USER_LINKS' | 'LOAD_USER_LINKS';
-  data?: UserLink[];
+  data?: string[];
 }
 
 interface StorageResponse {
   success: boolean;
-  data?: UserLink[];
+  data?: string[];
   error?: string;
 }
 
@@ -27,7 +14,7 @@ export default defineBackground(() => {
   console.log('Background script initialized', { id: browser.runtime.id });
 
   // Initialize WXT storage for user links
-  const userLinksStorage = storage.defineItem<UserLink[]>('sync:sidebar-user-links', {
+  const userLinksStorage = storage.defineItem<string[]>('sync:sidebar-user-links', {
     fallback: [],
   });
 
