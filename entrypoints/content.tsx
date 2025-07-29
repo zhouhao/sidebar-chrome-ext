@@ -97,6 +97,9 @@ const Sidebar: React.FC = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [urlToDelete, setUrlToDelete] = useState('');
 
+  // Sidebar visibility state
+  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+
   // Hide context menu when clicking elsewhere
   useEffect(() => {
     const handleClickOutside = () => {
@@ -510,6 +513,21 @@ const Sidebar: React.FC = () => {
     setIsDragOver(false); // Reset drag state when closing modal
   };
 
+  // Function to hide sidebar
+  const handleHideSidebar = () => {
+    setIsSidebarHidden(true);
+    setShowSettingsModal(false); // Close settings modal when hiding sidebar
+    document.body.style.marginLeft = '0px'; // Remove body margin when sidebar is hidden
+    document.body.style.transition = 'margin-left 0.3s ease';
+  };
+
+  // Function to show sidebar
+  const handleShowSidebar = () => {
+    setIsSidebarHidden(false);
+    document.body.style.marginLeft = '60px'; // Restore body margin when sidebar is shown
+    document.body.style.transition = 'margin-left 0.3s ease';
+  };
+
   return (
     <div
       style={{
@@ -634,7 +652,7 @@ const Sidebar: React.FC = () => {
         {/* Plus Button */}
         <div style={{
           position: 'absolute',
-          bottom: '50px',
+          bottom: '80px',
           left: '50%',
           transform: 'translateX(-50%)'
         }}>
@@ -668,7 +686,7 @@ const Sidebar: React.FC = () => {
         {/* Settings Button */}
         <div style={{
           position: 'absolute',
-          bottom: '10px',
+          bottom: '40px',
           left: '50%',
           transform: 'translateX(-50%)'
         }}>
@@ -696,6 +714,37 @@ const Sidebar: React.FC = () => {
             }}
           >
             ⚙️
+          </button>
+        </div>
+
+        {/* Left Arrow Icon - positioned at bottom of settings icon */}
+        <div style={{
+          position: 'absolute',
+          bottom: '5px',
+          left: '50%',
+          transform: 'translateX(-50%)'
+        }}>
+          <button
+            onClick={handleHideSidebar}
+            style={{
+              width: '20px',
+              height: '20px',
+              backgroundColor: 'transparent',
+              color: '#ffffff',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#666666';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            &lt;&lt;
           </button>
         </div>
       </div>
@@ -1132,12 +1181,7 @@ export default defineContentScript({
         // Store original margin to restore if needed
         const originalMarginLeft = document.body.style.marginLeft || '0px';
 
-        // Adjust the body's left margin to make room for the sidebar
-        // Check if body already has significant left margin
-        const currentMargin = parseInt(getComputedStyle(document.body).marginLeft) || 0;
-        const newMargin = Math.max(currentMargin, 60);
-
-        document.body.style.marginLeft = `${newMargin}px`;
+        document.body.style.marginLeft = `60px`;
         // document.body.style.transition = 'margin-left 0.3s ease';
 
         // Create React root and render the sidebar
