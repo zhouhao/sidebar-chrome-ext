@@ -84,23 +84,37 @@ const Sidebar: React.FC = () => {
     >
 
       {/* Example External Favicons */}
-      <div style={{marginBottom: '20px', paddingBottom: '15px', borderRadius: '5px'}}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        height: '100%',
+        gap: '17px',
+        marginTop: '15px'
+      }}>
         {Object.entries(exampleFavicons).map(([url, result]) => (
-          <div key={url} style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
+          <div key={url} style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%'
+          }}>
             {result.success ? (
-              <>
-                <a href={url} target="_blank" rel="noreferrer">
-                  <img
-                    src={result.iconUrl}
-                    alt={`Favicon for ${url}`}
-                    style={{width: '25px', height: '25px'}}
-                    onError={(e) => {
-                      console.log('[DEBUG_LOG] External favicon failed to load:', result.iconUrl);
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </a>
-              </>
+              <a href={url} target="_blank" rel="noreferrer">
+                <img
+                  src={result.iconUrl}
+                  alt={`Favicon for ${url}`}
+                  style={{
+                    width: '25px',
+                    height: '25px',
+                    display: 'block'
+                  }}
+                  onError={(e) => {
+                    console.log('[DEBUG_LOG] External favicon failed to load:', result.iconUrl);
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </a>
             ) : null}
           </div>
         ))}
