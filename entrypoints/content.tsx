@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom/client';
+import {sendMessage} from 'webext-bridge/content-script';
 
 // TypeScript interfaces for favicon functionality
 interface FaviconResult {
@@ -42,26 +43,39 @@ const Sidebar: React.FC = () => {
   const [isAddingLink, setIsAddingLink] = useState(false);
   const [addLinkError, setAddLinkError] = useState('');
 
-  // Load user links from background storage via messaging
+  // Load user links from background storage via messaging with retry logic
   useEffect(() => {
-    const loadUserLinks = async () => {
-      try {
-        const response = await browser.runtime.sendMessage({
-          type: 'LOAD_USER_LINKS'
-        });
-        
-        if (response.success && response.data) {
-          setUserLinks(response.data);
-          console.log('[DEBUG_LOG] Loaded user links from background storage:', response.data);
-        } else {
-          console.error('[DEBUG_LOG] Failed to load user links:', response.error);
+    const loadUserLinksWithRetry = async (maxRetries = 3, delay = 500) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[DEBUG_LOG] Attempting to load user links from background (attempt ${attempt}/${maxRetries})`);
+
+          const response = await sendMessage('load-user-links', undefined, 'background');
+
+          if (response && response.success && response.data) {
+            setUserLinks(response.data);
+            console.log('[DEBUG_LOG] Successfully loaded user links from background storage:', response.data);
+            return; // Success, exit retry loop
+          } else {
+            console.warn(`[DEBUG_LOG] Failed to load user links (attempt ${attempt}):`, response?.error || 'No response');
+          }
+        } catch (error) {
+          console.warn(`[DEBUG_LOG] Error loading user links from background storage (attempt ${attempt}):`, error);
         }
-      } catch (error) {
-        console.error('[DEBUG_LOG] Error loading user links from background storage:', error);
+
+        // If not the last attempt, wait before retrying
+        if (attempt < maxRetries) {
+          console.log(`[DEBUG_LOG] Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 1.5; // Exponential backoff
+        }
       }
+
+      console.error('[DEBUG_LOG] Failed to load user links after all retry attempts');
     };
 
-    loadUserLinks();
+    // Start loading URLs immediately when component mounts
+    loadUserLinksWithRetry();
   }, []);
 
   // Save user links to background storage via messaging whenever userLinks changes
@@ -69,11 +83,8 @@ const Sidebar: React.FC = () => {
     if (userLinks.length > 0) {
       const saveUserLinks = async () => {
         try {
-          const response = await browser.runtime.sendMessage({
-            type: 'SAVE_USER_LINKS',
-            data: userLinks
-          });
-          
+          const response = await sendMessage('save-user-links', userLinks, 'background');
+
           if (response.success) {
             console.log('[DEBUG_LOG] Saved user links to background storage:', userLinks);
           } else {
@@ -83,7 +94,7 @@ const Sidebar: React.FC = () => {
           console.error('[DEBUG_LOG] Error saving user links to background storage:', error);
         }
       };
-      
+
       saveUserLinks();
     }
   }, [userLinks]);
@@ -138,9 +149,9 @@ const Sidebar: React.FC = () => {
     }
 
     // Check for duplicates
-    const isDuplicate = userLinks.includes(newLinkUrl) || 
-                       Object.keys(exampleFavicons).includes(newLinkUrl);
-    
+    const isDuplicate = userLinks.includes(newLinkUrl) ||
+      Object.keys(exampleFavicons).includes(newLinkUrl);
+
     if (isDuplicate) {
       setAddLinkError('This URL is already added');
       return;
@@ -326,7 +337,7 @@ const Sidebar: React.FC = () => {
           }}>
             Add New Link
           </h4>
-          
+
           <input
             type="text"
             value={newLinkUrl}
@@ -381,7 +392,7 @@ const Sidebar: React.FC = () => {
             >
               {isAddingLink ? 'Adding...' : 'Add'}
             </button>
-            
+
             <button
               onClick={handleCancelAddLink}
               disabled={isAddingLink}

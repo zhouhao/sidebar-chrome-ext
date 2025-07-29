@@ -1,13 +1,15 @@
-// Message types for communication between content script and background
-interface StorageMessage {
-  type: 'SAVE_USER_LINKS' | 'LOAD_USER_LINKS';
-  data?: string[];
-}
+import { onMessage } from 'webext-bridge/background';
 
-interface StorageResponse {
-  success: boolean;
-  data?: string[];
-  error?: string;
+// Protocol definitions for webext-bridge
+interface ProtocolMap {
+  'save-user-links': {
+    data: string[];
+    return: { success: boolean; error?: string };
+  };
+  'load-user-links': {
+    data: void;
+    return: { success: boolean; data?: string[]; error?: string };
+  };
 }
 
 export default defineBackground(() => {
@@ -18,38 +20,42 @@ export default defineBackground(() => {
     fallback: [],
   });
 
-  // Handle messages from content scripts
-  browser.runtime.onMessage.addListener(
-    async (message: StorageMessage, sender, sendResponse): Promise<StorageResponse> => {
-      console.log('[DEBUG_LOG] Background received message:', message);
+  // Handle save user links message
+  onMessage<'save-user-links'>('save-user-links', async ({ data }) => {
+    console.log('[DEBUG_LOG] Background received save-user-links message:', data);
 
-      try {
-        switch (message.type) {
-          case 'SAVE_USER_LINKS':
-            if (message.data) {
-              await userLinksStorage.setValue(message.data);
-              console.log('[DEBUG_LOG] Saved user links to WXT storage:', message.data);
-              return { success: true };
-            }
-            return { success: false, error: 'No data provided' };
-
-          case 'LOAD_USER_LINKS':
-            const userLinks = await userLinksStorage.getValue();
-            console.log('[DEBUG_LOG] Loaded user links from WXT storage:', userLinks);
-            return { success: true, data: userLinks };
-
-          default:
-            return { success: false, error: 'Unknown message type' };
-        }
-      } catch (error) {
-        console.error('[DEBUG_LOG] Background storage error:', error);
-        return { 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        };
+    try {
+      if (data && Array.isArray(data)) {
+        await userLinksStorage.setValue(data);
+        console.log('[DEBUG_LOG] Saved user links to WXT storage:', data);
+        return { success: true };
       }
+      return { success: false, error: 'No data provided or invalid data format' };
+    } catch (error) {
+      console.error('[DEBUG_LOG] Background storage error (save):', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
     }
-  );
+  });
 
-  console.log('[DEBUG_LOG] Background message listeners registered');
+  // Handle load user links message
+  onMessage<'load-user-links'>('load-user-links', async () => {
+    console.log('[DEBUG_LOG] Background received load-user-links message');
+
+    try {
+      const userLinks = await userLinksStorage.getValue();
+      console.log('[DEBUG_LOG] Loaded user links from WXT storage:', userLinks);
+      return { success: true, data: userLinks };
+    } catch (error) {
+      console.error('[DEBUG_LOG] Background storage error (load):', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  });
+
+  console.log('[DEBUG_LOG] Background webext-bridge message listeners registered');
 });
