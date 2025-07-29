@@ -303,105 +303,96 @@ const Sidebar: React.FC = () => {
       {showAddLinkModal && (
         <div style={{
           position: 'fixed',
-          top: '0',
-          left: '60px',
-          width: '300px',
-          height: '100vh',
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          zIndex: '1000000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          bottom: '50px', // Position above the plus button
+          left: '10px', // Align with sidebar padding
+          width: '380px',
+          backgroundColor: '#404040',
+          border: '1px solid #555555',
+          borderRadius: '8px',
+          padding: '20px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+          zIndex: '1000000'
         }}>
-          <div style={{
-            backgroundColor: '#404040',
-            border: '1px solid #555555',
-            borderRadius: '8px',
-            padding: '20px',
-            width: '250px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+          <h4 style={{
+            margin: '0 0 15px 0',
+            color: '#ffffff',
+            fontSize: '16px',
+            textAlign: 'center'
           }}>
-            <h4 style={{
-              margin: '0 0 15px 0',
+            Add New Link
+          </h4>
+          
+          <input
+            type="text"
+            value={newLinkUrl}
+            onChange={(e) => setNewLinkUrl(e.target.value)}
+            placeholder="Enter URL (e.g., https://example.com)"
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #666666',
+              borderRadius: '4px',
+              backgroundColor: '#333333',
               color: '#ffffff',
-              fontSize: '16px',
-              textAlign: 'center'
+              fontSize: '14px',
+              marginBottom: '10px',
+              boxSizing: 'border-box'
+            }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleAddLink();
+              }
+            }}
+          />
+
+          {addLinkError && (
+            <p style={{
+              color: '#ff6b6b',
+              fontSize: '12px',
+              margin: '0 0 10px 0'
             }}>
-              Add New Link
-            </h4>
-            
-            <input
-              type="text"
-              value={newLinkUrl}
-              onChange={(e) => setNewLinkUrl(e.target.value)}
-              placeholder="Enter URL (e.g., https://example.com)"
+              {addLinkError}
+            </p>
+          )}
+
+          <div style={{
+            display: 'flex',
+            gap: '10px',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={handleAddLink}
+              disabled={isAddingLink}
               style={{
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #666666',
-                borderRadius: '4px',
-                backgroundColor: '#333333',
+                padding: '8px 16px',
+                backgroundColor: '#4CAF50',
                 color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: isAddingLink ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
-                marginBottom: '10px',
-                boxSizing: 'border-box'
+                opacity: isAddingLink ? 0.6 : 1
               }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddLink();
-                }
+            >
+              {isAddingLink ? 'Adding...' : 'Add'}
+            </button>
+            
+            <button
+              onClick={handleCancelAddLink}
+              disabled={isAddingLink}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#666666',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: isAddingLink ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                opacity: isAddingLink ? 0.6 : 1
               }}
-            />
-
-            {addLinkError && (
-              <p style={{
-                color: '#ff6b6b',
-                fontSize: '12px',
-                margin: '0 0 10px 0'
-              }}>
-                {addLinkError}
-              </p>
-            )}
-
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              justifyContent: 'center'
-            }}>
-              <button
-                onClick={handleAddLink}
-                disabled={isAddingLink}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#4CAF50',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: isAddingLink ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  opacity: isAddingLink ? 0.6 : 1
-                }}
-              >
-                {isAddingLink ? 'Adding...' : 'Add'}
-              </button>
-              
-              <button
-                onClick={handleCancelAddLink}
-                disabled={isAddingLink}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#666666',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: isAddingLink ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  opacity: isAddingLink ? 0.6 : 1
-                }}
-              >
-                Cancel
-              </button>
-            </div>
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
