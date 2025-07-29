@@ -9,20 +9,20 @@ const Sidebar: React.FC = () => {
         position: 'fixed',
         top: '0',
         left: '0',
-        width: '300px',
+        width: '60px',
         height: '100vh',
-        backgroundColor: '#f8f9fa',
-        borderRight: '1px solid #dee2e6',
+        backgroundColor: '#404040',
+        borderRight: '1px solid #555555',
         boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
         zIndex: '999999',
-        padding: '20px',
+        padding: '10px',
         boxSizing: 'border-box',
         fontFamily: 'Arial, sans-serif',
-        overflow: 'auto'
+        overflow: 'hidden'
       }}
     >
-      <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>Extension Sidebar</h3>
-      <div style={{ color: '#666' }}>
+      <h3 style={{ margin: '0 0 20px 0', color: '#ffffff' }}>Extension Sidebar</h3>
+      <div style={{ color: '#cccccc' }}>
         <p>This sidebar is injected by the browser extension.</p>
         <p>Current page: {window.location.hostname}</p>
         <p>Time: {new Date().toLocaleTimeString()}</p>
