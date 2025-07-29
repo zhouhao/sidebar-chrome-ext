@@ -25,5 +25,5 @@ web-ext.config.ts
 *.sln
 *.sw?
 
-.idea
 test-*.html
+test-*.js
