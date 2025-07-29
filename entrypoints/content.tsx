@@ -33,9 +33,51 @@ const getFaviconViaGoogle = (url: string): FaviconResult => {
   }
 };
 
+// Interface for user-added links
+interface UserLink {
+  url: string;
+  favicon: FaviconResult;
+  addedAt: number;
+}
+
 // Sidebar component with favicon functionality
 const Sidebar: React.FC = () => {
   const [exampleFavicons, setExampleFavicons] = useState<{ [key: string]: FaviconResult }>({});
+  const [userLinks, setUserLinks] = useState<UserLink[]>([]);
+  const [showAddLinkModal, setShowAddLinkModal] = useState(false);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [addLinkError, setAddLinkError] = useState('');
+
+  // Load user links from localStorage
+  useEffect(() => {
+    const loadUserLinks = () => {
+      try {
+        const savedLinks = localStorage.getItem('sidebar-user-links');
+        if (savedLinks) {
+          const parsedLinks: UserLink[] = JSON.parse(savedLinks);
+          setUserLinks(parsedLinks);
+          console.log('[DEBUG_LOG] Loaded user links from localStorage:', parsedLinks);
+        }
+      } catch (error) {
+        console.error('[DEBUG_LOG] Error loading user links from localStorage:', error);
+      }
+    };
+
+    loadUserLinks();
+  }, []);
+
+  // Save user links to localStorage whenever userLinks changes
+  useEffect(() => {
+    if (userLinks.length > 0) {
+      try {
+        localStorage.setItem('sidebar-user-links', JSON.stringify(userLinks));
+        console.log('[DEBUG_LOG] Saved user links to localStorage:', userLinks);
+      } catch (error) {
+        console.error('[DEBUG_LOG] Error saving user links to localStorage:', error);
+      }
+    }
+  }, [userLinks]);
 
   useEffect(() => {
     // Demonstrate fetching favicons from external websites
@@ -64,6 +106,69 @@ const Sidebar: React.FC = () => {
     loadExampleFavicons();
   }, []);
 
+  // Function to validate URL
+  const isValidUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Function to add a new link
+  const handleAddLink = async () => {
+    if (!newLinkUrl.trim()) {
+      setAddLinkError('Please enter a URL');
+      return;
+    }
+
+    if (!isValidUrl(newLinkUrl)) {
+      setAddLinkError('Please enter a valid URL');
+      return;
+    }
+
+    // Check for duplicates
+    const isDuplicate = userLinks.some(link => link.url === newLinkUrl) || 
+                       Object.keys(exampleFavicons).includes(newLinkUrl);
+    
+    if (isDuplicate) {
+      setAddLinkError('This URL is already added');
+      return;
+    }
+
+    setIsAddingLink(true);
+    setAddLinkError('');
+
+    try {
+      // Get favicon for the new URL
+      const faviconResult = getFaviconViaGoogle(newLinkUrl);
+      
+      const newLink: UserLink = {
+        url: newLinkUrl,
+        favicon: faviconResult,
+        addedAt: Date.now()
+      };
+
+      setUserLinks(prev => [...prev, newLink]);
+      setNewLinkUrl('');
+      setShowAddLinkModal(false);
+      console.log('[DEBUG_LOG] Added new link:', newLink);
+    } catch (error) {
+      setAddLinkError('Failed to add link. Please try again.');
+      console.error('[DEBUG_LOG] Error adding new link:', error);
+    } finally {
+      setIsAddingLink(false);
+    }
+  };
+
+  // Function to cancel adding link
+  const handleCancelAddLink = () => {
+    setShowAddLinkModal(false);
+    setNewLinkUrl('');
+    setAddLinkError('');
+  };
+
   return (
     <div
       style={{
@@ -83,42 +188,223 @@ const Sidebar: React.FC = () => {
       }}
     >
 
-      {/* Example External Favicons */}
+      {/* Icons Container */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         height: '100%',
-        gap: '17px',
-        marginTop: '15px'
+        position: 'relative'
       }}>
-        {Object.entries(exampleFavicons).map(([url, result]) => (
-          <div key={url} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%'
-          }}>
-            {result.success ? (
-              <a href={url} target="_blank" rel="noreferrer">
-                <img
-                  src={result.iconUrl}
-                  alt={`Favicon for ${url}`}
-                  style={{
-                    width: '25px',
-                    height: '25px',
-                    display: 'block'
-                  }}
-                  onError={(e) => {
-                    console.log('[DEBUG_LOG] External favicon failed to load:', result.iconUrl);
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </a>
-            ) : null}
-          </div>
-        ))}
+        {/* Icons List */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '17px',
+          marginTop: '15px',
+          flex: '1',
+          overflowY: 'auto',
+          paddingBottom: '60px' // Space for plus button
+        }}>
+          {/* Example External Favicons */}
+          {Object.entries(exampleFavicons).map(([url, result]) => (
+            <div key={url} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%'
+            }}>
+              {result.success ? (
+                <a href={url} target="_blank" rel="noreferrer">
+                  <img
+                    src={result.iconUrl}
+                    alt={`Favicon for ${url}`}
+                    style={{
+                      width: '25px',
+                      height: '25px',
+                      display: 'block'
+                    }}
+                    onError={(e) => {
+                      console.log('[DEBUG_LOG] External favicon failed to load:', result.iconUrl);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </a>
+              ) : null}
+            </div>
+          ))}
+
+          {/* User Added Links */}
+          {userLinks.map((link) => (
+            <div key={link.url} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%'
+            }}>
+              {link.favicon.success ? (
+                <a href={link.url} target="_blank" rel="noreferrer">
+                  <img
+                    src={link.favicon.iconUrl}
+                    alt={`Favicon for ${link.url}`}
+                    style={{
+                      width: '25px',
+                      height: '25px',
+                      display: 'block'
+                    }}
+                    onError={(e) => {
+                      console.log('[DEBUG_LOG] User link favicon failed to load:', link.favicon.iconUrl);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </a>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        {/* Plus Button */}
+        <div style={{
+          position: 'absolute',
+          bottom: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)'
+        }}>
+          <button
+            onClick={() => setShowAddLinkModal(true)}
+            style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              backgroundColor: '#555555',
+              border: '1px solid #777777',
+              color: '#ffffff',
+              fontSize: '18px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#666666';
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLButtonElement).style.backgroundColor = '#555555';
+            }}
+          >
+            +
+          </button>
+        </div>
       </div>
+
+      {/* Add Link Modal */}
+      {showAddLinkModal && (
+        <div style={{
+          position: 'fixed',
+          top: '0',
+          left: '60px',
+          width: '300px',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          zIndex: '1000000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            backgroundColor: '#404040',
+            border: '1px solid #555555',
+            borderRadius: '8px',
+            padding: '20px',
+            width: '250px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h4 style={{
+              margin: '0 0 15px 0',
+              color: '#ffffff',
+              fontSize: '16px',
+              textAlign: 'center'
+            }}>
+              Add New Link
+            </h4>
+            
+            <input
+              type="text"
+              value={newLinkUrl}
+              onChange={(e) => setNewLinkUrl(e.target.value)}
+              placeholder="Enter URL (e.g., https://example.com)"
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #666666',
+                borderRadius: '4px',
+                backgroundColor: '#333333',
+                color: '#ffffff',
+                fontSize: '14px',
+                marginBottom: '10px',
+                boxSizing: 'border-box'
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddLink();
+                }
+              }}
+            />
+
+            {addLinkError && (
+              <p style={{
+                color: '#ff6b6b',
+                fontSize: '12px',
+                margin: '0 0 10px 0'
+              }}>
+                {addLinkError}
+              </p>
+            )}
+
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={handleAddLink}
+                disabled={isAddingLink}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#4CAF50',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: isAddingLink ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  opacity: isAddingLink ? 0.6 : 1
+                }}
+              >
+                {isAddingLink ? 'Adding...' : 'Add'}
+              </button>
+              
+              <button
+                onClick={handleCancelAddLink}
+                disabled={isAddingLink}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#666666',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: isAddingLink ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  opacity: isAddingLink ? 0.6 : 1
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -155,10 +441,10 @@ export default defineContentScript({
         // Adjust the body's left margin to make room for the sidebar
         // Check if body already has significant left margin
         const currentMargin = parseInt(getComputedStyle(document.body).marginLeft) || 0;
-        const newMargin = Math.max(currentMargin, 300);
+        const newMargin = Math.max(currentMargin, 60);
 
         document.body.style.marginLeft = `${newMargin}px`;
-        document.body.style.transition = 'margin-left 0.3s ease';
+        // document.body.style.transition = 'margin-left 0.3s ease';
 
         // Create React root and render the sidebar
         const root = ReactDOM.createRoot(sidebarContainer);
