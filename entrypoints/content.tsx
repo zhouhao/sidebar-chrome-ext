@@ -34,21 +34,62 @@ const Sidebar: React.FC = () => {
 export default defineContentScript({
   matches: ['<all_urls>'],
   main() {
-    // Create a container for the sidebar
-    const sidebarContainer = document.createElement('div');
-    sidebarContainer.id = 'extension-sidebar-container';
-    
-    // Insert the container at the beginning of the body
-    document.body.insertBefore(sidebarContainer, document.body.firstChild);
-    
-    // Adjust the body's left margin to make room for the sidebar
-    document.body.style.marginLeft = '300px';
-    document.body.style.transition = 'margin-left 0.3s ease';
-    
-    // Create React root and render the sidebar
-    const root = ReactDOM.createRoot(sidebarContainer);
-    root.render(<Sidebar />);
-    
-    console.log('Sidebar injected successfully');
+    // Wait for DOM to be ready
+    const initSidebar = () => {
+      try {
+        // Check if sidebar already exists to prevent duplicates
+        if (document.getElementById('extension-sidebar-container')) {
+          console.log('Sidebar already exists, skipping injection');
+          return;
+        }
+
+        // Ensure body exists
+        if (!document.body) {
+          console.log('Document body not ready, retrying...');
+          setTimeout(initSidebar, 100);
+          return;
+        }
+
+        // Create a container for the sidebar
+        const sidebarContainer = document.createElement('div');
+        sidebarContainer.id = 'extension-sidebar-container';
+        
+        // Insert the container at the beginning of the body
+        document.body.insertBefore(sidebarContainer, document.body.firstChild);
+        
+        // Store original margin to restore if needed
+        const originalMarginLeft = document.body.style.marginLeft || '0px';
+        
+        // Adjust the body's left margin to make room for the sidebar
+        // Check if body already has significant left margin
+        const currentMargin = parseInt(getComputedStyle(document.body).marginLeft) || 0;
+        const newMargin = Math.max(currentMargin, 300);
+        
+        document.body.style.marginLeft = `${newMargin}px`;
+        document.body.style.transition = 'margin-left 0.3s ease';
+        
+        // Create React root and render the sidebar
+        const root = ReactDOM.createRoot(sidebarContainer);
+        root.render(<Sidebar />);
+        
+        // Store cleanup function globally for potential future use
+        (window as any).__extensionSidebarCleanup = () => {
+          root.unmount();
+          sidebarContainer.remove();
+          document.body.style.marginLeft = originalMarginLeft;
+        };
+        
+        console.log('Sidebar injected successfully');
+      } catch (error) {
+        console.error('Failed to inject sidebar:', error);
+      }
+    };
+
+    // Initialize sidebar when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSidebar);
+    } else {
+      initSidebar();
+    }
   },
 });
