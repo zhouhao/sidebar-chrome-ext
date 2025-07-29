@@ -20,8 +20,8 @@ A simple and elegant Chrome extension that provides a sidebar for bookmarking yo
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd sidebar-ext
+   git clone https://github.com/zhouhao/sidebar-chrome-ext.git
+   cd sidebar-chrome-ext
    ```
 
 2. **Install dependencies**:
