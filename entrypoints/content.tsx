@@ -60,26 +60,25 @@ const getFaviconViaGoogle = (url: string): FaviconResult => {
 
 // Sidebar component with favicon functionality
 const Sidebar: React.FC = () => {
-  const [exampleFavicons, setExampleFavicons] = useState<{ [key: string]: FaviconResult }>({});
   const [userLinks, setUserLinks] = useState<string[]>([]);
   const [showAddLinkModal, setShowAddLinkModal] = useState(false);
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [isAddingLink, setIsAddingLink] = useState(false);
   const [addLinkError, setAddLinkError] = useState('');
-  
+
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  
+
   // Drag and drop state
   const [isDragOver, setIsDragOver] = useState(false);
-  
+
   // Icon drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -92,7 +91,7 @@ const Sidebar: React.FC = () => {
     y: 0,
     url: ''
   });
-  
+
   // Confirmation dialog state
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [urlToDelete, setUrlToDelete] = useState('');
@@ -104,7 +103,7 @@ const Sidebar: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = () => {
       if (contextMenu.visible) {
-        setContextMenu(prev => ({ ...prev, visible: false }));
+        setContextMenu(prev => ({...prev, visible: false}));
       }
     };
 
@@ -191,8 +190,7 @@ const Sidebar: React.FC = () => {
     }
 
     // Check for duplicates
-    const isDuplicate = userLinks.includes(newLinkUrl) ||
-      Object.keys(exampleFavicons).includes(newLinkUrl);
+    const isDuplicate = userLinks.includes(newLinkUrl);
 
     if (isDuplicate) {
       setAddLinkError('This URL is already added');
@@ -231,10 +229,10 @@ const Sidebar: React.FC = () => {
         exportDate: new Date().toISOString(),
         version: '1.0'
       };
-      
+
       const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -243,7 +241,7 @@ const Sidebar: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       console.log('[DEBUG_LOG] Exported URLs:', exportData);
     } catch (error) {
       console.error('[DEBUG_LOG] Error exporting data:', error);
@@ -264,7 +262,7 @@ const Sidebar: React.FC = () => {
     try {
       const text = await file.text();
       const importData = JSON.parse(text);
-      
+
       // Validate the imported data structure
       if (!importData.urls || !Array.isArray(importData.urls)) {
         throw new Error('Invalid file format. Expected JSON with "urls" array.');
@@ -273,7 +271,7 @@ const Sidebar: React.FC = () => {
       // Validate each URL
       const validUrls: string[] = [];
       const invalidUrls: string[] = [];
-      
+
       for (const url of importData.urls) {
         if (typeof url === 'string' && isValidUrl(url)) {
           validUrls.push(url);
@@ -289,19 +287,19 @@ const Sidebar: React.FC = () => {
       // Merge with existing URLs (avoid duplicates)
       const existingUrls = new Set(userLinks);
       const newUrls = validUrls.filter(url => !existingUrls.has(url));
-      
+
       if (newUrls.length === 0) {
         setImportSuccess('All URLs from the file are already in your list.');
       } else {
         const updatedUrls = [...userLinks, ...newUrls];
         setUserLinks(updatedUrls);
-        
+
         let successMessage = `Successfully imported ${newUrls.length} new URL${newUrls.length > 1 ? 's' : ''}.`;
         if (invalidUrls.length > 0) {
           successMessage += ` ${invalidUrls.length} invalid URL${invalidUrls.length > 1 ? 's were' : ' was'} skipped.`;
         }
         setImportSuccess(successMessage);
-        
+
         console.log('[DEBUG_LOG] Imported URLs:', newUrls);
       }
     } catch (error) {
@@ -348,7 +346,7 @@ const Sidebar: React.FC = () => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX;
     const y = event.clientY;
-    
+
     if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
       setIsDragOver(false);
     }
@@ -364,7 +362,7 @@ const Sidebar: React.FC = () => {
     }
 
     const files = Array.from(event.dataTransfer.files);
-    
+
     if (files.length === 0) {
       setImportError('No files were dropped.');
       return;
@@ -376,7 +374,7 @@ const Sidebar: React.FC = () => {
     }
 
     const file = files[0];
-    
+
     try {
       await processImportedFile(file);
     } catch (error) {
@@ -388,7 +386,7 @@ const Sidebar: React.FC = () => {
   const handleRightClick = (event: React.MouseEvent, url: string) => {
     event.preventDefault();
     event.stopPropagation();
-    
+
     setContextMenu({
       visible: true,
       x: event.clientX,
@@ -401,7 +399,7 @@ const Sidebar: React.FC = () => {
   const handleDeleteFromContextMenu = () => {
     setUrlToDelete(contextMenu.url);
     setShowDeleteConfirmation(true);
-    setContextMenu(prev => ({ ...prev, visible: false }));
+    setContextMenu(prev => ({...prev, visible: false}));
   };
 
   // Function to confirm deletion
@@ -425,7 +423,7 @@ const Sidebar: React.FC = () => {
     setDraggedIndex(index);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/html', event.currentTarget.outerHTML);
-    
+
     // Add some visual feedback to the dragged element
     setTimeout(() => {
       if (event.currentTarget) {
@@ -437,7 +435,7 @@ const Sidebar: React.FC = () => {
   const handleIconDragOver = (event: React.DragEvent<HTMLDivElement>, index: number) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    
+
     if (draggedIndex !== null && draggedIndex !== index) {
       setDragOverIndex(index);
     }
@@ -456,7 +454,7 @@ const Sidebar: React.FC = () => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX;
     const y = event.clientY;
-    
+
     if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
       setDragOverIndex(null);
     }
@@ -464,7 +462,7 @@ const Sidebar: React.FC = () => {
 
   const handleIconDrop = (event: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
     event.preventDefault();
-    
+
     if (draggedIndex === null || draggedIndex === dropIndex) {
       return;
     }
@@ -472,23 +470,23 @@ const Sidebar: React.FC = () => {
     // Create a new array with reordered items
     const newUserLinks = [...userLinks];
     const draggedItem = newUserLinks[draggedIndex];
-    
+
     // Remove the dragged item from its original position
     newUserLinks.splice(draggedIndex, 1);
-    
+
     // Insert the dragged item at the new position
     newUserLinks.splice(dropIndex, 0, draggedItem);
-    
+
     // Update the state
     setUserLinks(newUserLinks);
-    
+
     console.log('[DEBUG_LOG] Reordered icons:', {
       from: draggedIndex,
       to: dropIndex,
       draggedUrl: draggedItem,
       newOrder: newUserLinks
     });
-    
+
     // Reset drag state
     setDraggedIndex(null);
     setDragOverIndex(null);
@@ -499,7 +497,7 @@ const Sidebar: React.FC = () => {
     if (event.currentTarget) {
       event.currentTarget.style.opacity = '1';
     }
-    
+
     // Reset drag state
     setDraggedIndex(null);
     setDragOverIndex(null);
@@ -527,6 +525,40 @@ const Sidebar: React.FC = () => {
     document.body.style.transition = 'margin-left 0.3s ease';
   };
 
+  if (isSidebarHidden) {
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: '80px',
+        left: '20px',
+        zIndex: '999999',
+      }}>
+        <button
+          onClick={handleShowSidebar}
+          title='Show Sidebar'
+          style={{
+            width: '20px',
+            height: '20px',
+            backgroundColor: 'transparent',
+            color: '#000',
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: 'none',
+          }}
+          onMouseEnter={(e) => {
+            (e.target as HTMLButtonElement).style.backgroundColor = 'rgba(158,146,146,0.27)';
+          }}
+          onMouseLeave={(e) => {
+            (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+          }}
+        >
+          &gt;&gt;
+        </button>
+      </div>);
+  }
   return (
     <div
       style={{
@@ -566,33 +598,7 @@ const Sidebar: React.FC = () => {
           overflowX: 'hidden',
           paddingBottom: '100px' // Space for plus button and settings button
         }}>
-          {/* Example External Favicons */}
-          {Object.entries(exampleFavicons).map(([url, result]) => (
-            <div key={url} style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%'
-            }}>
-              {result.success ? (
-                <a href={url} target="_blank" rel="noreferrer">
-                  <img
-                    src={result.iconUrl}
-                    alt={`Favicon for ${url}`}
-                    style={{
-                      width: '25px',
-                      height: '25px',
-                      display: 'block'
-                    }}
-                    onError={(e) => {
-                      console.log('[DEBUG_LOG] External favicon failed to load:', result.iconUrl);
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </a>
-              ) : null}
-            </div>
-          ))}
+
 
           {/* User Added Links */}
           {userLinks.map((url, index) => {
@@ -600,10 +606,10 @@ const Sidebar: React.FC = () => {
             const faviconResult = getFaviconViaGoogle(url);
             const isDragging = draggedIndex === index;
             const isDragOver = dragOverIndex === index;
-            
+
             return (
-              <div 
-                key={url} 
+              <div
+                key={url}
                 draggable={true}
                 style={{
                   display: 'flex',
@@ -871,7 +877,7 @@ const Sidebar: React.FC = () => {
           </h4>
 
           {/* Export Section */}
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{marginBottom: '20px'}}>
             <h5 style={{
               margin: '0 0 10px 0',
               color: '#ffffff',
@@ -904,7 +910,7 @@ const Sidebar: React.FC = () => {
           </div>
 
           {/* Import Section */}
-          <div style={{ marginBottom: '15px' }}>
+          <div style={{marginBottom: '15px'}}>
             <h5 style={{
               margin: '0 0 10px 0',
               color: '#ffffff',
@@ -912,7 +918,7 @@ const Sidebar: React.FC = () => {
             }}>
               Import Data
             </h5>
-            
+
             {/* Drag and Drop Zone */}
             <div
               onDragOver={handleDragOver}
@@ -942,7 +948,7 @@ const Sidebar: React.FC = () => {
                   '📁 Drag & drop a JSON file here, or click to browse'
                 )}
               </div>
-              
+
               <input
                 type="file"
                 accept=".json"
@@ -960,7 +966,7 @@ const Sidebar: React.FC = () => {
                 }}
               />
             </div>
-            
+
             {isImporting && (
               <p style={{
                 color: '#ffffff',
@@ -1096,7 +1102,7 @@ const Sidebar: React.FC = () => {
             }}>
               Confirm Deletion
             </h4>
-            
+
             <p style={{
               color: '#ffffff',
               fontSize: '14px',
@@ -1105,7 +1111,7 @@ const Sidebar: React.FC = () => {
               wordBreak: 'break-all'
             }}>
               Are you sure you want to delete this link?<br/>
-              <span style={{ color: '#cccccc', fontSize: '12px' }}>
+              <span style={{color: '#cccccc', fontSize: '12px'}}>
                 {urlToDelete}
               </span>
             </p>
