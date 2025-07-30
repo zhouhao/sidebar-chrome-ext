@@ -632,24 +632,23 @@ const Sidebar: React.FC = () => {
                 onDrop={(e) => handleIconDrop(e, index)}
                 onDragEnd={handleIconDragEnd}
               >
-                {faviconResult.success ? (
-                  <a href={url} target="_blank" rel="noreferrer" title={url}>
-                    <img
-                      src={faviconResult.iconUrl}
-                      alt={`Favicon for ${url}`}
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        display: 'block',
-                        maxWidth: 'none',
-                      }}
-                      onError={(e) => {
-                        console.log('[DEBUG_LOG] User link favicon failed to load:', faviconResult.iconUrl);
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </a>
-                ) : null}
+
+                <a href={url} target="_blank" rel="noreferrer" title={url}>
+                  <img
+                    src={faviconResult.success ? faviconResult.iconUrl : browser.runtime.getURL('icon/32.png')}
+                    alt={`Favicon for ${url}`}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      display: 'block',
+                      maxWidth: 'none',
+                    }}
+                    onError={(e) => {
+                      console.log('[DEBUG_LOG] User link favicon failed to load:', faviconResult.iconUrl);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </a>
               </div>
             );
           })}
