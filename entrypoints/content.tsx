@@ -633,7 +633,7 @@ const Sidebar: React.FC = () => {
                 onDragEnd={handleIconDragEnd}
               >
                 {faviconResult.success ? (
-                  <a href={url} target="_blank" rel="noreferrer">
+                  <a href={url} target="_blank" rel="noreferrer" title={url}>
                     <img
                       src={faviconResult.iconUrl}
                       alt={`Favicon for ${url}`}
