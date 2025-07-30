@@ -521,7 +521,7 @@ const Sidebar: React.FC = () => {
   // Function to show sidebar
   const handleShowSidebar = () => {
     setIsSidebarHidden(false);
-    document.body.style.marginLeft = '60px'; // Restore body margin when sidebar is shown
+    document.body.style.marginLeft = '45px'; // Restore body margin when sidebar is shown
     document.body.style.transition = 'margin-left 0.3s ease';
   };
 
@@ -565,7 +565,7 @@ const Sidebar: React.FC = () => {
         position: 'fixed',
         top: '0',
         left: '0',
-        width: '60px',
+        width: '45px',
         height: '100vh',
         backgroundColor: '#404040',
         borderRight: '1px solid #555555',
@@ -638,9 +638,10 @@ const Sidebar: React.FC = () => {
                       src={faviconResult.iconUrl}
                       alt={`Favicon for ${url}`}
                       style={{
-                        width: '25px',
-                        height: '25px',
-                        display: 'block'
+                        width: '24px',
+                        height: '24px',
+                        display: 'block',
+                        maxWidth: 'none',
                       }}
                       onError={(e) => {
                         console.log('[DEBUG_LOG] User link favicon failed to load:', faviconResult.iconUrl);
@@ -1187,7 +1188,7 @@ export default defineContentScript({
         // Store original margin to restore if needed
         const originalMarginLeft = document.body.style.marginLeft || '0px';
 
-        document.body.style.marginLeft = `60px`;
+        document.body.style.marginLeft = `45px`;
         // document.body.style.transition = 'margin-left 0.3s ease';
 
         // Create React root and render the sidebar
