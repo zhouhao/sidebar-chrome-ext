@@ -4,7 +4,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   manifest: {
-    name: 'Salty Sidebar',
+    name: 'Salt Sidebar',
     permissions: ['storage'],
     web_accessible_resources: [
       {

@@ -23,6 +23,17 @@ interface LoadUserLinksResponse {
   error?: string;
 }
 
+interface SaveSidebarVisibilityResponse {
+  success: boolean;
+  error?: string;
+}
+
+interface LoadSidebarVisibilityResponse {
+  success: boolean;
+  data?: boolean;
+  error?: string;
+}
+
 // Protocol map for webext-bridge (matching background.ts)
 interface ProtocolMap {
   'save-user-links': {
@@ -32,6 +43,14 @@ interface ProtocolMap {
   'load-user-links': {
     data: void;
     return: LoadUserLinksResponse;
+  };
+  'save-sidebar-visibility': {
+    data: boolean;
+    return: SaveSidebarVisibilityResponse;
+  };
+  'load-sidebar-visibility': {
+    data: void;
+    return: LoadSidebarVisibilityResponse;
   };
 }
 
@@ -97,7 +116,7 @@ const Sidebar: React.FC = () => {
   const [urlToDelete, setUrlToDelete] = useState('');
 
   // Sidebar visibility state
-  const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const [isSidebarHidden, setIsSidebarHidden] = useState(true);
 
   // Hide context menu when clicking elsewhere
   useEffect(() => {
@@ -146,6 +165,41 @@ const Sidebar: React.FC = () => {
     loadUserLinksWithRetry();
   }, []);
 
+  // Load sidebar visibility from background storage via messaging with retry logic
+  useEffect(() => {
+    const loadSidebarVisibilityWithRetry = async (maxRetries = 3, delay = 500) => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`[DEBUG_LOG] Attempting to load sidebar visibility from background (attempt ${attempt}/${maxRetries})`);
+
+          const response = await sendMessage('load-sidebar-visibility', null, 'background') as unknown as LoadSidebarVisibilityResponse;
+
+          if (response && response.success && typeof response.data === 'boolean') {
+            setIsSidebarHidden(response.data);
+            console.log('[DEBUG_LOG] Successfully loaded sidebar visibility from background storage:', response.data);
+            return; // Success, exit retry loop
+          } else {
+            console.warn(`[DEBUG_LOG] Failed to load sidebar visibility (attempt ${attempt}):`, response?.error || 'No response');
+          }
+        } catch (error) {
+          console.warn(`[DEBUG_LOG] Error loading sidebar visibility from background storage (attempt ${attempt}):`, error);
+        }
+
+        // If not the last attempt, wait before retrying
+        if (attempt < maxRetries) {
+          console.log(`[DEBUG_LOG] Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 1.5; // Exponential backoff
+        }
+      }
+
+      console.error('[DEBUG_LOG] Failed to load sidebar visibility after all retry attempts');
+    };
+
+    // Start loading sidebar visibility immediately when component mounts
+    loadSidebarVisibilityWithRetry();
+  }, []);
+
   // Save user links to background storage via messaging whenever userLinks changes
   useEffect(() => {
     if (userLinks.length > 0) {
@@ -166,6 +220,26 @@ const Sidebar: React.FC = () => {
       saveUserLinks();
     }
   }, [userLinks]);
+
+  // Save sidebar visibility to background storage via messaging whenever isSidebarHidden changes
+  useEffect(() => {
+    const saveSidebarVisibility = async () => {
+      try {
+        const response = await sendMessage('save-sidebar-visibility', isSidebarHidden, 'background') as unknown as SaveSidebarVisibilityResponse;
+
+        if (response && response.success) {
+          console.log('[DEBUG_LOG] Saved sidebar visibility to background storage:', isSidebarHidden);
+        } else {
+          console.error('[DEBUG_LOG] Failed to save sidebar visibility:', response?.error);
+        }
+      } catch (error) {
+        console.error('[DEBUG_LOG] Error saving sidebar visibility to background storage:', error);
+      }
+    };
+
+    // Save sidebar visibility (including initial state)
+    saveSidebarVisibility();
+  }, [isSidebarHidden]);
 
   // Function to validate URL
   const isValidUrl = (url: string): boolean => {
@@ -635,7 +709,7 @@ const Sidebar: React.FC = () => {
 
                 <a href={url} target="_blank" rel="noreferrer" title={url}>
                   <img
-                    src={faviconResult.success ? faviconResult.iconUrl : browser.runtime.getURL('icon/32.png')}
+                    src={faviconResult.success ? faviconResult.iconUrl : browser.runtime.getURL('/icon/32.png')}
                     alt={`Favicon for ${url}`}
                     style={{
                       width: '24px',
