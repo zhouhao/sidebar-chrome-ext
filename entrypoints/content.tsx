@@ -633,6 +633,9 @@ const Sidebar: React.FC = () => {
         </button>
       </div>);
   }
+
+  document.body.style.marginLeft = '45px';
+
   return (
     <div
       style={{
@@ -1261,7 +1264,7 @@ export default defineContentScript({
         // Store original margin to restore if needed
         const originalMarginLeft = document.body.style.marginLeft || '0px';
 
-        document.body.style.marginLeft = `45px`;
+        // document.body.style.marginLeft = `45px`;
         // document.body.style.transition = 'margin-left 0.3s ease';
 
         // Create React root and render the sidebar
